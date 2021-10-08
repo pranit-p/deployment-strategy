@@ -1,0 +1,58 @@
+AWSTemplateFormatVersion: 2010-09-09
+
+Parameters:
+  CrossAccountEventBusArn:
+    Type: String
+    Description: "cloud watch cross account event bus arn"
+
+Resources:
+  CrossAccountEventRule:
+    Type: AWS::Events::Rule
+    Properties:
+      Name: "send_event_to_cross_account_event_bus"
+      Description: "Used for sending event cross account"
+      EventPattern:
+        source:
+          - "aws.ec2"
+        detail-type:
+          - "EC2 Instance State-change Notification"
+        detail:
+          state:
+            - "stopping"
+      State: "ENABLED"
+      Targets:
+        - Arn: !Ref CrossAccountEventBusArn
+          Id: Id123478
+          RoleArn: !GetAtt RootRole.Arn
+
+  RootRole:
+    Type: "AWS::IAM::Role"
+    Properties:
+      RoleName: "cross_account_event_bus_access_role"
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - "events.amazonaws.com"
+            Action:
+              - "sts:AssumeRole"
+  RolePolicies:
+    Type: "AWS::IAM::Policy"
+    Properties:
+      PolicyName: "cross_account_event_bus_access_policy"
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: "Allow"
+            Action: "events:PutEvents"
+            Resource: "*"
+      Roles:
+        - Ref: "RootRole"
+  RootInstanceProfile:
+    Type: "AWS::IAM::InstanceProfile"
+    Properties:
+      Path: /
+      Roles:
+        - Ref: "RootRole"
